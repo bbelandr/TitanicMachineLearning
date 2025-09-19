@@ -17,7 +17,7 @@ def initialize_params(m_features, seed=None):
     return w, b
 
 # Returns z and y_hat
-def forward(X, w, b):   # CHECK IF THIS SHIT WORKS CORRECTLY
+def forward(X, w, b):
     z = X @ w + b   # @ does matrix multiplication
     z = np.array(z)
     y_hat = sigmoid(z)
