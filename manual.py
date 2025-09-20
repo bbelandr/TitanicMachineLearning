@@ -141,3 +141,4 @@ output = pd.DataFrame({
     "Survived": pd.Series(y_prediction.ravel())
 })
 output[:418].to_csv("submission.csv", index=False)
+# This submission technically isn't even finished; I had to go back through the submission.csv file and remove column 0's decimals so that it would be accepted
