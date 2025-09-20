@@ -4,7 +4,6 @@ import pandas as pd
 
 
 
-
 def sigmoid(z):
     z = np.array(z)
     return 1/(1 + math.e**(-z))   # np.exp raises every element
@@ -45,13 +44,18 @@ def train(X, y, lr, n_epochs, X_val=None, y_val=None):
     w, b = initialize_params(m, 123)
     trainingCosts = []
     validationCosts = []
-    for epoch in range(n_epochs):
+    for epoch in range(n_epochs):   # Training the model
         z, y_hat = forward(X, w, b)
+        print(type(y_hat[0][0]))
         cost = compute_cost(y, y_hat)
         trainingCosts.append(cost)
         dw, db = compute_gradients(X, y, y_hat)
         w, b = update_params(w, b, dw, db, lr)
-    return w, b, trainingCosts
+    y_hat = predict_proba(X_val, w, b)
+    print(type(y_hat[0][0]))
+    cost = compute_cost(y_val, y_hat)
+    validationCosts.append(cost)
+    return w, b, trainingCosts, validationCosts
 
 def predict_proba(X,w,b):
     z, y_hat = forward(X, w, b)
@@ -66,42 +70,59 @@ def predict_proba(X,w,b):
 # 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def preprocess (dataset, toRemove, toNormalize, toEncode):
+    dataset = dataset.drop(toRemove, axis=1) # Removing unwanted features
+
+    # Normalization
+    normalized = dataset.drop(toEncode, axis=1)
+    normalized = normalized.fillna(normalized.mean()) # Replacing NaN values with their averages   
+    normalized = (normalized-normalized.mean())/normalized.std()
+
+    # Encoding
+    encoded = dataset.drop(toNormalize, axis=1)
+    encoded = encoded.fillna(encoded.mode()) 
+    encoded = pd.get_dummies(encoded, drop_first=True)
+
+    fullSet = pd.concat([normalized, encoded], axis=1)
+    return fullSet
+
 # Grabbing training and validation data
 train_data = pd.read_csv("./kaggle/input/titanic/train.csv")
 test_data  = pd.read_csv("./kaggle/input/titanic/test.csv")
 
+
+
 # Separating our target from our features
-X = train_data.drop("Survived", axis=1)
-y = train_data["Survived"]
+X_train = train_data.drop("Survived", axis=1)
+y_train = train_data["Survived"]
 
-# Removal of features unwanted for the model to use
-X = X.drop("Ticket", axis=1)
-X = X.drop("Embarked", axis=1)
-X = X.drop("Cabin", axis=1)
-X = X.drop("Fare", axis=1)
-X = X.drop("Name", axis=1)
-X = X.drop("PassengerId", axis=1)
+# Shuffle row indices
+np.random.seed(42)  # reproducibility
+indices = np.arange(len(train_data))
+np.random.shuffle(indices)
+
+# 80/20 split index
+split = int(0.8 * len(indices))
+
+# Training and validation indices
+train_idx, val_idx = indices[:split], indices[split:]
+
+# Create train/val sets
+X_train, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
+y_train, y_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
+
+X_train = preprocess(X_train, ["Ticket", "Embarked", "Cabin", "Fare", "Name", "PassengerId"], ["Pclass", "Age", "SibSp", "Parch"], "Sex")
+X_val = preprocess(X_val, ["Ticket", "Embarked", "Cabin", "Fare", "Name", "PassengerId"], ["Pclass", "Age", "SibSp", "Parch"], "Sex")
 
 
-# Normalizing all non-classified features
-normalized = X.drop("Sex", axis=1)
-normalized = normalized.fillna(normalized.mean()) # Replacing NaN values with their averages   
-normalized = (normalized-normalized.mean())/normalized.std()
-
-# One hot encoding
-encoded = X["Sex"]
-encoded = encoded.fillna(encoded.mode()) 
-encoded = pd.get_dummies(encoded, drop_first=True)
-
-# Combining the two
-X = pd.concat([normalized, encoded], axis=1)
-
-print(X.head())
+print(y_val)
 # print(y.head())
 
 
 
-X = X.to_numpy(dtype=float)
-y = y.to_numpy(dtype=float).reshape(-1, 1) # (makes sure this is an n by 1 array, not 1D)
-w, b, trainingCosts = train(X, y, 1, 100)
-print(predict_proba(X[4], w, b))
+X_train = X_train.to_numpy(dtype=float)
+y_train = y_train.to_numpy(dtype=float).reshape(-1, 1) # (makes sure this is an n by 1 array, not 1D)
+X_val = X_val.to_numpy(dtype=float)
+y_val = y_val.to_numpy(dtype=float).reshape(-1, 1) # (makes sure this is an n by 1 array, not 1D)
+w, b, trainingCosts, validationCosts = train(X_train, y_train, 1, 100, X_val, y_val)
+print(trainingCosts, validationCosts)
