@@ -46,13 +46,13 @@ def train(X, y, lr, n_epochs, X_val=None, y_val=None):
     validationCosts = []
     for epoch in range(n_epochs):   # Training the model
         z, y_hat = forward(X, w, b)
-        print(type(y_hat[0][0]))
+        # print(type(y_hat[0][0]))
         cost = compute_cost(y, y_hat)
         trainingCosts.append(cost)
         dw, db = compute_gradients(X, y, y_hat)
         w, b = update_params(w, b, dw, db, lr)
     y_hat = predict_proba(X_val, w, b)
-    print(type(y_hat[0][0]))
+    # print(type(y_hat[0][0]))
     cost = compute_cost(y_val, y_hat)
     validationCosts.append(cost)
     return w, b, trainingCosts, validationCosts
@@ -115,7 +115,7 @@ X_train = preprocess(X_train, ["Ticket", "Embarked", "Cabin", "Fare", "Name", "P
 X_val = preprocess(X_val, ["Ticket", "Embarked", "Cabin", "Fare", "Name", "PassengerId"], ["Pclass", "Age", "SibSp", "Parch"], "Sex")
 
 
-print(y_val)
+# print(y_val)
 # print(y.head())
 
 
@@ -125,4 +125,19 @@ y_train = y_train.to_numpy(dtype=float).reshape(-1, 1) # (makes sure this is an 
 X_val = X_val.to_numpy(dtype=float)
 y_val = y_val.to_numpy(dtype=float).reshape(-1, 1) # (makes sure this is an n by 1 array, not 1D)
 w, b, trainingCosts, validationCosts = train(X_train, y_train, 1, 100, X_val, y_val)
-print(trainingCosts, validationCosts)
+# print(trainingCosts, validationCosts)
+
+X_test = preprocess(test_data, ["Ticket", "Embarked", "Cabin", "Fare", "Name", "PassengerId"], ["Pclass", "Age", "SibSp", "Parch"], "Sex")
+y_prediction = predict_proba(X_train, w, b)
+y_prediction = pd.Series(y_prediction.ravel())
+for i in range(len(y_prediction)):
+    if y_prediction[i] > 0.5:
+        y_prediction[i] = 1
+    else:
+        y_prediction[i] = 0
+print(test_data)
+output = pd.DataFrame({
+    "PassengerId": test_data.PassengerId,
+    "Survived": pd.Series(y_prediction.ravel())
+})
+output[:418].to_csv("submission.csv", index=False)
